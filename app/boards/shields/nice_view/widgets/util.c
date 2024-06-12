@@ -10,20 +10,23 @@
 
 LV_IMG_DECLARE(bolt);
 
+// void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
+//     static lv_color_t cbuf_tmp[CANVAS_SIZE * CANVAS_SIZE];
+//     memcpy(cbuf_tmp, cbuf, sizeof(cbuf_tmp));
+//     lv_img_dsc_t img;
+//     img.data = (void *)cbuf_tmp;
+//     img.header.cf = LV_IMG_CF_TRUE_COLOR;
+//     img.header.w = CANVAS_SIZE;
+//     img.header.h = CANVAS_SIZE;
+//
+//     lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
+//     lv_canvas_transform(canvas, &img, 900, LV_IMG_ZOOM_NONE, -1, 0, CANVAS_SIZE / 2,
+//                         CANVAS_SIZE / 2, true);
+// }
 void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
-    static lv_color_t cbuf_tmp[CANVAS_SIZE * CANVAS_SIZE];
-    memcpy(cbuf_tmp, cbuf, sizeof(cbuf_tmp));
-    lv_img_dsc_t img;
-    img.data = (void *)cbuf_tmp;
-    img.header.cf = LV_IMG_CF_TRUE_COLOR;
-    img.header.w = CANVAS_SIZE;
-    img.header.h = CANVAS_SIZE;
-
-    lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
-    lv_canvas_transform(canvas, &img, 900, LV_IMG_ZOOM_NONE, -1, 0, CANVAS_SIZE / 2,
-                        CANVAS_SIZE / 2, true);
+    lv_img_set_pivot(canvas, 0, 0);
+    lv_img_set_angle(canvas, 900);
 }
-
 void draw_battery(lv_obj_t *canvas, const struct status_state *state) {
     lv_draw_rect_dsc_t rect_black_dsc;
     init_rect_dsc(&rect_black_dsc, LVGL_BACKGROUND);
