@@ -28,5 +28,16 @@
             ignore-numbers;
         };
     };
+
+    behaviors {
+        /omit-if-no-ref/ nav_word: behavior_nav_word {
+            compatible = "zmk,behavior-caps-word";
+            #binding-cells = <0>;
+            continue-list = <BACKSPACE DELETE DOT COMMA>;
+            // layers = <xx>; // to be specified in user config using "&num_word { layers = <xx>; };"
+            ignore-alphas;
+            ignore-numbers;
+        };
+    };
 };
 
