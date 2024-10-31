@@ -3,8 +3,7 @@
 #include <lvgl.h>
 #include "util.h"
 
-struct wpm_status_state {
-    uint8_t wpm;
+struct mods_status_state {
+    uint8_t mods;
 };
-
-void draw_wpm_status(lv_obj_t *canvas, const struct status_state *state);
+void draw_mods_status(lv_obj_t *canvas, const struct status_state *state);

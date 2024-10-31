@@ -6,26 +6,31 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/event_manager.h>
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/wpm_state_changed.h>
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
-#include <zmk/events/wpm_state_changed.h>
+#include <zmk/events/keycode_state_changed.h>
 #include <zmk/battery.h>
 #include <zmk/ble.h>
 #include <zmk/display.h>
 #include <zmk/endpoints.h>
 #include <zmk/keymap.h>
-#include <zmk/usb.h>
 #include <zmk/wpm.h>
+#include <zmk/usb.h>
 
 #include "battery.h"
 #include "layer.h"
 #include "output.h"
 #include "profile.h"
 #include "screen.h"
+#include "mods.h"
 #include "wpm.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
+
+
+
 
 /**
  * Draw canvas
@@ -38,9 +43,10 @@ static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status
     draw_background(canvas);
     draw_output_status(canvas, state);
     draw_battery_status(canvas, state);
-    draw_wpm_status(canvas, state);
+    draw_mods_status(canvas, state);
     draw_profile_status(canvas, state);
     draw_layer_status(canvas, state);
+    draw_wpm_status(canvas, state);
 
     // Rotate for horizontal display
     rotate_canvas(canvas, cbuf);
@@ -84,6 +90,58 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
+/**
+ * Mods status
+ **/
+
+static void set_mods_status(struct zmk_widget_screen *widget, struct mods_status_state state) {
+    // Had to make call here since status_get_state didn't reliably update the mod state
+    widget->state.mod_state = zmk_hid_get_explicit_mods();
+    draw_canvas(widget->obj, widget->cbuf, &widget->state);
+}
+
+static void mods_status_update_cb(struct mods_status_state state) {
+    struct zmk_widget_screen *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_mods_status(widget, state); }
+}
+
+struct mods_status_state mods_status_get_state(const zmk_event_t *eh) {
+    // Intentionally useless
+    return (struct mods_status_state){.mods = 0};
+};
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_mods_status, struct mods_status_state, mods_status_update_cb,
+                            mods_status_get_state)
+ZMK_SUBSCRIPTION(widget_mods_status, zmk_keycode_state_changed);
+
+
+/**
+ * WPM status
+ **/
+
+static void set_wpm_status(struct zmk_widget_screen *widget, struct wpm_status_state state) {
+    for (int i = 0; i < 9; i++) {
+        widget->state.wpm[i] = widget->state.wpm[i + 1];
+    }
+    widget->state.wpm[9] = state.wpm;
+
+    draw_canvas(widget->obj, widget->cbuf, &widget->state);
+}
+
+static void wpm_status_update_cb(struct wpm_status_state state) {
+    struct zmk_widget_screen *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_wpm_status(widget, state); }
+}
+
+struct wpm_status_state wpm_status_get_state(const zmk_event_t *eh) {
+    return (struct wpm_status_state){.wpm = zmk_wpm_get_state()};
+};
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_wpm_status, struct wpm_status_state, wpm_status_update_cb,
+                            wpm_status_get_state)
+ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
+
 
 /**
  * Layer status
@@ -150,31 +208,6 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
 ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
 #endif
 
-/**
- * WPM status
- **/
-
-static void set_wpm_status(struct zmk_widget_screen *widget, struct wpm_status_state state) {
-    for (int i = 0; i < 9; i++) {
-        widget->state.wpm[i] = widget->state.wpm[i + 1];
-    }
-    widget->state.wpm[9] = state.wpm;
-
-    draw_canvas(widget->obj, widget->cbuf, &widget->state);
-}
-
-static void wpm_status_update_cb(struct wpm_status_state state) {
-    struct zmk_widget_screen *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_wpm_status(widget, state); }
-}
-
-struct wpm_status_state wpm_status_get_state(const zmk_event_t *eh) {
-    return (struct wpm_status_state){.wpm = zmk_wpm_get_state()};
-};
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_wpm_status, struct wpm_status_state, wpm_status_update_cb,
-                            wpm_status_get_state)
-ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
 
 /**
  * Initialization
@@ -184,6 +217,7 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, CANVAS_HEIGHT, CANVAS_WIDTH);
 
+
     lv_obj_t *canvas = lv_canvas_create(widget->obj);
     lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
     lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_HEIGHT, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
@@ -192,6 +226,7 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget_battery_status_init();
     widget_layer_status_init();
     widget_output_status_init();
+    widget_mods_status_init();
     widget_wpm_status_init();
 
     return 0;

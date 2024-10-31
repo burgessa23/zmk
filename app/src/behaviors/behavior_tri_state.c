@@ -39,6 +39,9 @@ struct active_tri_state {
     bool is_pressed;
     bool first_press;
     uint32_t position;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT)
+    uint8_t source;
+#endif
     const struct behavior_tri_state_config *config;
     struct k_work_delayable release_timer;
     int64_t release_at;
@@ -65,8 +68,8 @@ static void reset_timer(int32_t timestamp, struct active_tri_state *tri_state) {
 }
 
 void trigger_end_behavior(struct active_tri_state *si) {
-    zmk_behavior_queue_add(si->position, si->config->end_behavior, true, si->config->tap_ms);
-    zmk_behavior_queue_add(si->position, si->config->end_behavior, false, 0);
+    zmk_behavior_queue_add(&si, si->config->end_behavior, true, si->config->tap_ms);
+    zmk_behavior_queue_add(&si, si->config->end_behavior, false, 0);
 }
 
 void behavior_tri_state_timer_handler(struct k_work *item) {

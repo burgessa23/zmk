@@ -3,6 +3,7 @@
 #include <lvgl.h>
 #include <zmk/endpoints.h>
 
+#define DISP_WIDTH 68
 #define CANVAS_WIDTH 68
 #define CANVAS_HEIGHT 160
 
@@ -10,6 +11,10 @@
     IS_ENABLED(CONFIG_NICE_VIEW_WIDGET_INVERTED) ? lv_color_black() : lv_color_white()
 #define LVGL_FOREGROUND                                                                            \
     IS_ENABLED(CONFIG_NICE_VIEW_WIDGET_INVERTED) ? lv_color_white() : lv_color_black()
+
+#define MODS_HEIGHT 42
+#define MODS_IDX 3
+#define MODS_OFFSET (-BT_PROF_HEIGHT + BT_PROF_OFFSET - PADDING)
 
 struct status_state {
     uint8_t battery;
@@ -22,6 +27,7 @@ struct status_state {
     uint8_t layer_index;
     const char *layer_label;
     uint8_t wpm[10];
+    uint8_t mod_state;
 #else
     bool connected;
 #endif
