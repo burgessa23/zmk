@@ -164,6 +164,19 @@ int zmk_usb_hid_send_consumer_report(void) {
     return zmk_usb_hid_send_report((uint8_t *)report, sizeof(*report));
 }
 
+#if IS_ENABLED(CONFIG_ZMK_MOUSE)
+int zmk_usb_hid_send_mouse_report() {
+#if IS_ENABLED(CONFIG_ZMK_USB_BOOT)
+    if (hid_protocol == HID_PROTOCOL_BOOT) {
+        return -ENOTSUP;
+    }
+#endif /* IS_ENABLED(CONFIG_ZMK_USB_BOOT) */
+
+    struct zmk_hid_mouse_report *report = zmk_hid_get_mouse_report();
+    return zmk_usb_hid_send_report((uint8_t *)report, sizeof(*report));
+}
+#endif // IS_ENABLED(CONFIG_ZMK_MOUSE)
+
 static int zmk_usb_hid_init(void) {
     hid_dev = device_get_binding("HID_0");
     if (hid_dev == NULL) {
@@ -182,4 +195,4 @@ static int zmk_usb_hid_init(void) {
     return 0;
 }
 
-SYS_INIT(zmk_usb_hid_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+SYS_INIT(zmk_usb_hid_init, APPLICATION, CONFIG_ZMK_USB_HID_INIT_PRIORITY);

@@ -15,9 +15,6 @@
 #include <dt-bindings/zmk/hid_usage_pages.h>
 #include <zmk/usb_hid.h>
 #include <zmk/hog.h>
-#include <zmk/mouse/hid.h>
-#include <zmk/mouse/hog.h>
-#include <zmk/mouse/usb_hid.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/ble_active_profile_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
@@ -119,9 +116,7 @@ int zmk_endpoints_toggle_transport(void) {
     return zmk_endpoints_select_transport(new_transport);
 }
 
-struct zmk_endpoint_instance zmk_endpoints_selected(void) {
-    return current_instance;
-}
+struct zmk_endpoint_instance zmk_endpoints_selected(void) { return current_instance; }
 
 static int send_keyboard_report(void) {
     switch (current_instance.transport) {
@@ -211,7 +206,7 @@ int zmk_endpoints_send_mouse_report() {
     switch (current_instance.transport) {
     case ZMK_TRANSPORT_USB: {
 #if IS_ENABLED(CONFIG_ZMK_USB)
-        int err = zmk_mouse_usb_hid_send_mouse_report();
+        int err = zmk_usb_hid_send_mouse_report();
         if (err) {
             LOG_ERR("FAILED TO SEND OVER USB: %d", err);
         }
@@ -224,8 +219,8 @@ int zmk_endpoints_send_mouse_report() {
 
     case ZMK_TRANSPORT_BLE: {
 #if IS_ENABLED(CONFIG_ZMK_BLE)
-        struct zmk_hid_mouse_report *mouse_report = zmk_mouse_hid_get_mouse_report();
-        int err = zmk_mouse_hog_send_mouse_report(&mouse_report->body);
+        struct zmk_hid_mouse_report *mouse_report = zmk_hid_get_mouse_report();
+        int err = zmk_hog_send_mouse_report(&mouse_report->body);
         if (err) {
             LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
         }
@@ -266,7 +261,8 @@ static int endpoints_handle_set(const char *name, size_t len, settings_read_cb r
     return 0;
 }
 
-struct settings_handler endpoints_handler = {.name = "endpoints", .h_set = endpoints_handle_set};
+SETTINGS_STATIC_HANDLER_DEFINE(endpoints, "endpoints", NULL, endpoints_handle_set, NULL, NULL);
+
 #endif /* IS_ENABLED(CONFIG_SETTINGS) */
 
 static bool is_usb_ready(void) {
@@ -325,17 +321,7 @@ static struct zmk_endpoint_instance get_selected_instance(void) {
 
 static int zmk_endpoints_init(void) {
 #if IS_ENABLED(CONFIG_SETTINGS)
-    settings_subsys_init();
-
-    int err = settings_register(&endpoints_handler);
-    if (err) {
-        LOG_ERR("Failed to register the endpoints settings handler (err %d)", err);
-        return err;
-    }
-
     k_work_init_delayable(&endpoints_save_work, endpoints_save_preferred_work);
-
-    settings_load_subtree("endpoints");
 #endif
 
     current_instance = get_selected_instance();
